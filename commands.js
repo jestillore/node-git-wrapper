@@ -33,7 +33,7 @@ exports.isRepo = function(callback){
 /*
  * Pull latest from the repository
 **/
-exports.pull = function(remote, branch){
+exports.pull = function(remote, branch, callback){
   	if(typeof remote == 'function') {
     	callback = remote;
     	remote = 'origin';
@@ -45,7 +45,7 @@ exports.pull = function(remote, branch){
 
   	var args = [remote, branch];
 	return this.exec('pull', args, function (err, stdout) {
-
+		if(typeof callback == 'function') callback(err, stdout);
 	});
 };
 
@@ -63,22 +63,31 @@ exports.branch = function(name, args, callback) {
 /*
  * Calls `git checkout`
 **/
-exports.checkout = function(branch, args) {
+exports.checkout = function(branch, args, callback) {
   	args = (args || []).concat([branch]);
   	return this.exec('checkout', args, function (err, stdout) {
-
+  		if(typeof callback == 'function') callback(err, stdout);
   	});
+};
+
+/*
+ *
+**/
+exports.fetch = function (callback) {
+	return this.exec('fetch', function (err, stdout) {
+		if(typeof callback == 'function') callback(err, stdout);
+	});
 };
 
 /*
  * Calls `git reset --hard HEAD`
 **/
-exports.reset = function () {
+exports.reset = function (callback) {
 	options = {
 		hard: true
 	};
 	return this.exec('reset', options, ['HEAD'], function (err, stdout) {
-
+		if(typeof callback == 'function') callback(err, stdout);
 	});
 };
 
@@ -122,7 +131,8 @@ exports.latestBranch = function (callback) {
 	this.branches(true, function (branches) {
 		var latest = '';
 		branches.forEach(function (branch) {
-			if(branch.indexOf(config.prefix) == 0) {
+			if(branch.indexOf(config.prefix) >= 0) {
+				branch = branch.substr(branch.indexOf(config.prefix));
 				if(latest == '') latest = branch;
 				if(compareVersion(formatVersion(latest), formatVersion(branch))) {
 					latest = branch;
