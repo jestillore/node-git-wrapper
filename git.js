@@ -2,6 +2,7 @@
 var fs = require('fs');
 var path = require('path');
 var exec = require('child_process').exec;
+var commands = require('./commands');
 
 // Class Git
 var Git = module.exports = function (options) {
@@ -59,3 +60,7 @@ Git.optionsToString = function (options) {
 
   return args.join(' ');
 };
+
+Object.keys(commands).forEach(function (key) {
+  Git.prototype[key] = commands[key];
+});
