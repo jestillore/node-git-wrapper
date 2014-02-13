@@ -116,7 +116,7 @@ exports.currentBranch = function (callback) {
 };
 
 /*
- * Find the latest branch based on the versioning.
+ * Find the latest branch basing the version.
 **/
 exports.latestBranch = function (callback) {
 	this.branches(true, function (branches) {
