@@ -1,10 +1,26 @@
 
 var options = {};
+var config = {
+	prefix: 'stable_'
+};
+
+var compareVersion = exports.compareVersion = function (v1, v2) {
+	return v2.major > v1.major || (v2.major == v1.major && (v2.minor > v1.minor || (v2.minor == v1.minor && v2.patch > v1.patch)));
+};
+
+var formatVersion = exports.formatVersion = function (version) {
+	var v = version.split('.');
+	return {
+		major: parseInt(v[0].substr(config.prefix.length)),
+		minor: parseInt(v[1]),
+		patch: parseInt(v[2])
+	}
+};
 
 /*
  * Checks to see if this is a git repository
 **/
-var isRepo = exports.isRepo = function(callback){
+exports.isRepo = function(callback){
 	var answer = true;
 	return this.exec('status', function(err, msg){
 		if(err){
@@ -17,7 +33,7 @@ var isRepo = exports.isRepo = function(callback){
 /*
  * Pull latest from the repository
 **/
-var pull = exports.pull = function(remote, branch){
+exports.pull = function(remote, branch){
   	if(typeof remote == 'function') {
     	callback = remote;
     	remote = 'origin';
@@ -36,7 +52,7 @@ var pull = exports.pull = function(remote, branch){
 /*
  * Calls `git branch`
 **/
-var branch = exports.branch = function(name, args, callback) {
+exports.branch = function(name, args, callback) {
   	args = (args || []).concat([name]);
   	return this.exec('branch', args, function (err, stdout) {
   		if(typeof callback == 'function')
@@ -47,7 +63,7 @@ var branch = exports.branch = function(name, args, callback) {
 /*
  * Calls `git checkout`
 **/
-var checkout = exports.checkout = function(branch, args) {
+exports.checkout = function(branch, args) {
   	args = (args || []).concat([branch]);
   	return this.exec('checkout', args, function (err, stdout) {
 
@@ -57,11 +73,62 @@ var checkout = exports.checkout = function(branch, args) {
 /*
  * Calls `git reset --hard HEAD`
 **/
-var reset = exports.reset = function () {
+exports.reset = function () {
 	options = {
 		hard: true
 	};
 	return this.exec('reset', options, ['HEAD'], function (err, stdout) {
 
+	});
+};
+
+/*
+ * Get all branches and store it in an array
+**/
+exports.branches = function (ast, callback) {
+	options = {
+		a: true
+	};
+	this.exec('branch', options, [], function (err, stdout) {
+		var branches = stdout.split("\n");
+		var b = [];
+		branches.forEach(function (branch) {
+			branch = branch.replace(/\s+/g, '');
+			if(ast) branch = branch.replace('*', '');
+			b.push(branch);
+		});
+		callback(b);
+	});
+};
+
+/*
+ * Get the current branch
+**/
+exports.currentBranch = function (callback) {
+	this.branches(false, function (branches) {
+		for(var a = 0; a < branches.length; a++) {
+			if(branches[a].charAt(0) == '*') {
+				callback(branches[a]);
+				break;
+			}
+		}
+	});
+};
+
+/*
+ * Find the latest branch based on the versioning.
+**/
+exports.latestBranch = function (callback) {
+	this.branches(true, function (branches) {
+		var latest = '';
+		branches.forEach(function (branch) {
+			if(branch.indexOf(config.prefix) == 0) {
+				if(latest == '') latest = branch;
+				if(compareVersion(formatVersion(latest), formatVersion(branch))) {
+					latest = branch;
+				}
+			}
+		});
+		callback(latest);
 	});
 };
